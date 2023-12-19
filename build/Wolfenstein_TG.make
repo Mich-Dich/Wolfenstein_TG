@@ -23,12 +23,12 @@ ifeq ($(config),debug)
   OBJDIR     = bin-int_linux/Debug
   TARGETDIR  = bin_linux
   TARGET     = $(TARGETDIR)/Wolfenstein_TG
-  DEFINES   += 
+  DEFINES   += -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) 
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s
+  LDFLAGS   += 
   LIBS      += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LDDEPS    += 
@@ -45,10 +45,10 @@ ifeq ($(config),release)
   OBJDIR     = bin-int_linux/Release
   TARGETDIR  = bin_linux
   TARGET     = $(TARGETDIR)/Wolfenstein_TG
-  DEFINES   += 
+  DEFINES   += -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) 
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -s
   LIBS      += 
@@ -64,7 +64,6 @@ ifeq ($(config),release)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/main.o \
 
 RESOURCES := \
 
@@ -125,8 +124,5 @@ $(GCH): $(PCH)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -c "$<"
 endif
 
-$(OBJDIR)/main.o: ../src/main.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(CFLAGS) -o "$@" -c "$<"
 
 -include $(OBJECTS:%.o=%.d)

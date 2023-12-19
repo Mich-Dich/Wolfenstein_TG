@@ -1,0 +1,13 @@
+
+
+sudo apt-get install --reinstall gnome-terminal
+
+sudo apt-get install --reinstall gnome-terminal gnome-terminal-data
+
+sudo apt-get install --reinstall libc6
+
+sudo apt-get install --reinstall gnome-terminal
+
+Installations (names of packages on Debian/Ubuntu):
+- libncurses-dev
+- ncurses-doc
