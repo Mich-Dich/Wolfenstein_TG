@@ -20,8 +20,8 @@ ifndef AR
 endif
 
 ifeq ($(config),debug)
-  OBJDIR     = bin-int_linux/Debug
-  TARGETDIR  = bin_linux
+  OBJDIR     = bin-int/Debug
+  TARGETDIR  = bin
   TARGET     = $(TARGETDIR)/Wolfenstein_TG
   DEFINES   += -DDEBUG
   INCLUDES  += 
@@ -42,8 +42,8 @@ ifeq ($(config),debug)
 endif
 
 ifeq ($(config),release)
-  OBJDIR     = bin-int_linux/Release
-  TARGETDIR  = bin_linux
+  OBJDIR     = bin-int/Release
+  TARGETDIR  = bin
   TARGET     = $(TARGETDIR)/Wolfenstein_TG
   DEFINES   += -DNDEBUG
   INCLUDES  += 
@@ -64,6 +64,7 @@ ifeq ($(config),release)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/main.o \
 
 RESOURCES := \
 
@@ -124,5 +125,8 @@ $(GCH): $(PCH)
 	$(SILENT) $(CC) $(CFLAGS) -o "$@" -c "$<"
 endif
 
+$(OBJDIR)/main.o: ../Wolfenstein_TG/src/main.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(CFLAGS) -o "$@" -c "$<"
 
 -include $(OBJECTS:%.o=%.d)

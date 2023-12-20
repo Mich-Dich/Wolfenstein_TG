@@ -10,8 +10,13 @@ location "build" -- location for the generated project files
 project "Wolfenstein_TG"
     kind "ConsoleApp"
     language "C"
-    targetdir ("build/bin_" .. os.get("cfg") .. "/") -- output directory for the binaries
-    objdir ("build/bin-int_" .. os.get("cfg") .. "/")  -- output directory for intermediate files
+    targetdir ("build/bin/") -- output directory for the binaries
+    objdir ("build/bin-int/")  -- output directory for intermediate files
+    
+    files
+    {
+    	"Wolfenstein_TG/src/main.c" 
+    }
     
     configuration "Debug"
         defines { "DEBUG" }
@@ -20,6 +25,5 @@ project "Wolfenstein_TG"
     configuration "Release"
         defines { "NDEBUG" }
         flags { "Optimize" }
-        
-    files { "src/*.c" } -- Specify the correct path to the source files
-    
+
+
