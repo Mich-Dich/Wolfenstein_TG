@@ -18,6 +18,13 @@ project "Wolfenstein_TG"
     	"Wolfenstein_TG/src/main.c" 
     }
     
+    -- Link against ncurses library
+    links
+    {
+    	"ncurses",
+    	"uv"
+    }
+    
     configuration "Debug"
         defines { "DEBUG" }
         flags { "Symbols" }
