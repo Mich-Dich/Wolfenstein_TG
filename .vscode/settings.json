@@ -9,6 +9,7 @@
         "initializer_list": "c",
         "stdio.h": "c",
         "colors.h": "c",
-        "defines.h": "c"
+        "defines.h": "c",
+        "math.h": "c"
     }
 }

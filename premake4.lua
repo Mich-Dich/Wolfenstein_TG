@@ -17,6 +17,11 @@ project "Wolfenstein_TG"
     {
     	"Wolfenstein_TG/src/main.c" 
     }
+    
+    links
+    {
+    	"m"
+    }
         
     configuration "Debug"
         defines { "DEBUG" }

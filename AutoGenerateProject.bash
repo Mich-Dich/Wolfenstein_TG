@@ -1,9 +1,13 @@
 #!/bin/bash
 
+echo "=================================== Building Project ==================================================="
+echo "starting to build project in [./build] folder"
+echo " "
+
 # ANSI color codes
 RED='\x1B[38;2;255;30;30m'
 GREEN='\x1B[38;2;20;255;20m'
-BLUE='\x1B[38;2;70;70;255m'
+BLUE='\x1B[38;2;120;120;255m'
 NC='\033[0m' # No Color
 
 # Default configuration
@@ -37,11 +41,14 @@ else
     echo -e "[${BLUE}bash${NC}] ./$directory fount"
 fi
 
-# Generate Makefiles using premake4 for the specified configuration
-
 echo -e "[${BLUE}bash${NC}] executing premake"
+echo " "
+# Generate Makefiles using premake4 for the specified configuration
 premake4 gmake --config="$configuration"
 
+echo " "
+echo "- - - - - - - - - - - - Finished [premake4] command  ==>  starting [make] command - - - - - - - - - - -"
+echo " "
 
 cd build
 echo -e "[${BLUE}bash${NC}] executing make"
@@ -53,6 +60,6 @@ if [ $? -eq 0 ]; then
     ./bin/Wolfenstein_TG  # Adjust the path based on your project structure
 else
     echo -e "${RED}Build failed${NC} => Execution aborted."
-    exit 1
 fi
 
+echo "===================================  Finished Build  ==================================================="
