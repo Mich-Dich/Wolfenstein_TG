@@ -7,6 +7,8 @@
         "vector": "c",
         "string_view": "c",
         "initializer_list": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "colors.h": "c",
+        "defines.h": "c"
     }
 }

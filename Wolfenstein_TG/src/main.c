@@ -17,12 +17,15 @@
 // ANSI escape codes for controlling the terminal
 #define ESC "\x1B"
 
-#define MAX_X 106
-#define MAX_Y 30
-#define SPEED 0.02      // Lower is faster
+#define SCREEN_X 105
+#define SCREEN_Y 59
+
+#define TARGET_FPS 30.0f      // Lower is faster
 
 static struct termios old_termios, new_termios;
 static bool8 running = TRUE;
+
+// ----------------------------------- Input -----------------------------------
 
 typedef enum {
     released = 0,
@@ -36,12 +39,15 @@ typedef struct {
     struct timeval last_changed;
 } Key_Info;
 
-struct screenData {
-    int width;
-    int height;
-    char screen_Pixel[MAX_Y][MAX_X];
-    float Z_Buffer[MAX_Y][MAX_X];
+// ----------------------------------- Display -----------------------------------
+
+struct Frame_Data {
+    char Frame[SCREEN_Y][COLOR_LENGTH * SCREEN_X +1];
+    int ColorCodePosition[SCREEN_Y][SCREEN_X];
+    float Z_Buffer[SCREEN_Y][SCREEN_X];
 };
+
+// ----------------------------------- Game -----------------------------------
 
 struct ChPosition {
     float pos_x;
@@ -49,26 +55,31 @@ struct ChPosition {
     float angle;
 };
 
-typedef struct {
-    int key;
-    int pos_x;
-    int pos_y;
-    char old_screen[MAX_Y][MAX_X];
-    char screen[MAX_Y][MAX_X];
-} GameState;
+struct MapData {
+    char WallData[16][16];
+};
+
+
+// ============================================================ INLINE FUNC ============================================================
+
+// Clear terminal and 
+void clear_Screen() {
+    printf("\x1B[2J\x1B[1;1H");
+}
+
+void Set_Pixel_Color(struct Frame_Data* Frame, int X, int Y, const char* Color) {
+
+    strncpy(Frame->Frame[Y] + ((COLOR_LENGTH-1) * X), Color, (COLOR_LENGTH-1));
+}
 
 // ============================================================ TERMINAL ============================================================
-
-void set_Terminal_Size(int cols, int rows) {
-    printf(ESC "[8;%d;%dt", rows, cols);
-}
 
 // reset Terminal to config befor game
 void reset_Terminal() {
 
     printf("\e[m");                             // reset color changes
     printf("\e[?25h");                          // show cursor
-    printf("\e[%d;%dH\n", MAX_Y + 3, MAX_X);    // move cursor after game board
+    printf("\e[1;1H\n");    // move cursor after game board
     fflush(stdout);
     tcsetattr(STDIN_FILENO, TCSANOW, &old_termios);
 }
@@ -76,10 +87,10 @@ void reset_Terminal() {
 // configure Terminal to be able to play game
 void configure_Terminal() {
 
-    set_Terminal_Size(MAX_X,MAX_Y);
+    printf(ESC "[8;%d;%dt", SCREEN_Y, SCREEN_X*2);        // set_Terminal_Size
 
     tcgetattr(STDIN_FILENO, &old_termios);
-	new_termios = old_termios; // save it to be able to reset on exit
+	new_termios = old_termios;                  // save it to be able to reset on exit
     new_termios.c_lflag &= ~(ICANON | ECHO);    // turn off echo + non-canonical mode
     new_termios.c_cc[VMIN] = 0;                 // set input to polling mode
     new_termios.c_cc[VTIME] = 0;                // set input to polling mode
@@ -88,29 +99,17 @@ void configure_Terminal() {
     printf("\e[?25l");                          // hide cursor
     atexit(reset_Terminal);
 
-    clear_Screen();
-    fflush(stdout);
-}
 
-
-void signal_handler(__attribute__((unused)) int signum) {
-    running = FALSE;
-}
-
-void render(GameState* state) {
-
-
-    char screen_Pixel[MAX_Y][MAX_X];
-
-    for (int x = 0; x < MAX_Y; x++) {
-        
-        printf("");
-    }
-
+    printf("\x1B[2J\x1B[1;1H");                 // clear screen
     fflush(stdout);
 }
 
 // ============================================================ INPUT ============================================================
+
+// handle Shutdown signal
+void signal_handler(__attribute__((unused)) int signum) {
+    running = FALSE;
+}
 
 // Check if any key is pressed
 int keyboard_hit() {
@@ -126,18 +125,16 @@ int keyboard_hit() {
 #define MIN_KEY_HOLD_TIME 0.15
 
 // Read all input from the terminal
-read_Input(Key_Info* inInputs[],const int size) {
+void read_Input(Key_Info* inInputs[],const int size) {
 
     bool8 Input_Memory[size];
     for (int16 x = 0; x < size; x++)
         Input_Memory[x] = FALSE;
     
-    printf("    pressed: ");
     // read stdin buffer for keys
     char buf;
     while (keyboard_hit()) {
         read(STDIN_FILENO, &buf, 1);
-        printf("%c", buf);
 
         for (int x = 0; x < size; x++) {
             
@@ -163,12 +160,10 @@ read_Input(Key_Info* inInputs[],const int size) {
     }
 
     // all key that are not pressed 
-    printf("\nNot pressed: ");
     for (int x = 0; x < size; x++) {
         
         if (Input_Memory[x] == FALSE) {
 
-            printf("%d", x);
             switch (inInputs[x]->state) {
 
                 case pressed:{
@@ -202,30 +197,29 @@ read_Input(Key_Info* inInputs[],const int size) {
             }
         }
     }
-
-    printf("\n");
 }
-
-// ============================================================ INLINE FUNC ============================================================
-
-// Clear terminal and 
-inline void clear_Screen(void) { printf("\e[2J\e[1;1H");}
 
 // ============================================================ MAIN ============================================================
 
 int main() {
 
+    // Seed the random number generator with the current time
+    srand(time(NULL));
+
     // Setup
     configure_Terminal();
     signal(SIGINT, signal_handler);
 
+    // calc FPS
    	struct timespec req = {};
 	struct timespec rem = {};
     clock_t start, end;
+    bool8 InTarget_FPS;
 
-    struct screenData Frame = {};
+    // PLayer Info
     struct ChPosition PlayerPos = {};
 
+    // Input Info
     Key_Info forward = {'w', released, 0};
     Key_Info backwards = {'s', released, 0};
     Key_Info right = {'d', released, 0};
@@ -237,38 +231,94 @@ int main() {
         &right,
         &left
     };
-
-    char key;
     
+    // map
+    struct MapData map2 = {
+        "################",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "#              #",
+        "################"
+    };
+
+    struct Frame_Data CurrentFrame;
+
     while (running) {
 
         start = clock();
 
-        clear_Screen();
+        clear_Screen();        
+        memset(&CurrentFrame, 0, sizeof(CurrentFrame));
 
-        printf("\e[1;1H");
-        printf("%s%s\x1B[m\n", PIXEL_WHITE, PIXEL_GREEN);
-        printf("%s\x1B[m\n\n", PIXEL_GREEN);
-    
-        read_Input(Inputs, 4);
-        printf("Input: %d|%d|%d|%d\n", forward.state, backwards.state, right.state, left.state);
+        // do 48 times
+        for (int16 x = 0; x < SCREEN_Y; x++) {
+            for (int y = 0; y < SCREEN_X; y++) {
+                
+                strcat(CurrentFrame.Frame[x], PIXEL_GRAY_40);
+            }
+            strcat(CurrentFrame.Frame[x], "\0");
+        }
+        
+        Set_Pixel_Color(&CurrentFrame, 2,5, PIXEL_RED_140);
+        // Use strncpy to replace the substring
+        size_t replacePosition = (COLOR_LENGTH-1) * 2;
+        strncpy(CurrentFrame.Frame[1] + replacePosition, PIXEL_WHITE, COLOR_LENGTH-1);
+
+        //CurrentFrame.Frame[1][0] = PIXEL_WHITE;
+
+        /*
+        // do 48 times
+        for (int16 x = 0; x < SCREEN_Y; x++) {
+            for (int y = 0; y < SCREEN_X; y++) {
+                
+                strcat(CurrentFrame.Frame[x], Get_Random_Gray_Pixel());
+            }
+            strcat(CurrentFrame.Frame[x], "\0");
+            printf("%s\x1B[m\n", CurrentFrame.Frame[x]);
+        }*/
+
+        // render Frame
+        for (int16 x = 0; x < SCREEN_Y; x++) {
+            printf("%s\x1B[m\n", CurrentFrame.Frame[x]);
+        }
+        
+            
     
         //update(&state);
         //render_Map();
 
         end = clock();
-
         double time_taken = ((double)(end - start)) / CLOCKS_PER_SEC;
-        printf(" \n\n FPS: [%3.2f/%3.2f]\n",1/SPEED, 1/time_taken);
-        
-        if (time_taken > SPEED)
+        InTarget_FPS = (time_taken > 1 / TARGET_FPS);
+
+        read_Input(Inputs, 4);
+        printf("Input:   %s\x1B[m            FPS: [%3.2f/%3.2f]\n       %s%s%s\x1B[m\n",
+            (forward.state? PIXEL_GREEN : PIXEL_WHITE),
+            TARGET_FPS, 1/time_taken,
+            (left.state? PIXEL_GREEN : PIXEL_WHITE),
+            (backwards.state? PIXEL_GREEN : PIXEL_WHITE),
+            (right.state? PIXEL_GREEN : PIXEL_WHITE));
+        fflush(stdin);
+
+        // Force FPS to TARGET_FPS
+        if (InTarget_FPS)
             continue;
 
         req.tv_sec = 0;
-        req.tv_nsec = (SPEED - time_taken) * 1000000000; // 0.1 seconds
-        printf(" sleep time: [%3.2f]\n", ((SPEED - time_taken) * 1000000000));
-        fflush(stdin);
+        req.tv_nsec = (1 / TARGET_FPS - time_taken) * 1000000000; // 0.1 seconds
         nanosleep(&req, &rem);
-
     }
+    
+    clear_Screen();
 }
